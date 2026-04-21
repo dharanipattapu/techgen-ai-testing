@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TECHGEN — Intelligent Test Suite</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:           #050810;
+      --glass:        rgba(255,255,255,0.03);
+      --glass-border: rgba(255,255,255,0.07);
+      --accent:       #6366f1;
+      --accent2:      #818cf8;
+      --accent3:      #a5b4fc;
+      --green:        #34d399;
+      --red:          #f87171;
+      --yellow:       #fbbf24;
+      --cyan:         #38bdf8;
+      --text:         #f1f5f9;
+      --muted:        #64748b;
+      --subtle:       #1e293b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; overflow-x: hidden; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(99,102,241,.025) 1px,transparent 1px), linear-gradient(90deg,rgba(99,102,241,.025) 1px,transparent 1px);
+      background-size: 56px 56px; pointer-events: none; z-index: 0;
+    }
+    .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
+    .orb-1 { width:420px;height:420px;background:rgba(99,102,241,.1); top:-120px;left:-80px; }
+    .orb-2 { width:280px;height:280px;background:rgba(52,211,153,.06);bottom:60px;right:-60px; }
+    .orb-3 { width:200px;height:200px;background:rgba(56,189,248,.05);top:45%;left:38%; }
+ 
+    /* SIDEBAR */
+    .sidebar { width:256px;min-height:100vh;background:rgba(5,8,16,.96);backdrop-filter:blur(24px);border-right:1px solid var(--glass-border);padding:28px 18px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;z-index:10; }
+    .logo { font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;letter-spacing:-.02em;margin-bottom:4px;background:linear-gradient(135deg,#818cf8,#a5b4fc,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent; }
+    .logo-sub { font-size:.65rem;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-bottom:24px;font-family:'DM Mono',monospace; }
+    .nav-label { font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;padding:10px 12px 4px; }
+    .nav-btn { position:relative;width:100%;padding:10px 14px;background:transparent;color:#94a3b8;border:1px solid transparent;border-radius:9px;cursor:pointer;text-align:left;font-size:.85rem;font-family:'DM Sans',sans-serif;font-weight:500;display:flex;align-items:center;gap:9px;transition:all .22s cubic-bezier(.34,1.56,.64,1); }
+    .nav-btn::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(99,102,241,.14),rgba(129,140,248,.08));opacity:0;transition:opacity .22s;border-radius:inherit; }
+    .nav-btn::after  { content:'';position:absolute;left:0;top:50%;transform:translateY(-50%) scaleY(0);width:3px;height:55%;background:linear-gradient(180deg,var(--accent),var(--green));border-radius:0 2px 2px 0;transition:transform .22s cubic-bezier(.34,1.56,.64,1); }
+    .nav-btn:hover { color:var(--text);border-color:var(--glass-border);transform:translateX(3px); }
+    .nav-btn:hover::before { opacity:1; }
+    .nav-btn:hover::after  { transform:translateY(-50%) scaleY(1); }
+    .nav-btn.active { color:var(--accent3);border-color:rgba(99,102,241,.28);background:rgba(99,102,241,.09); }
+    .nav-btn.active::after { transform:translateY(-50%) scaleY(1); }
+    .sidebar-divider { height:1px;background:var(--glass-border);margin:10px 0; }
+    .action-btn { position:relative;width:100%;padding:11px 14px;border:1px solid var(--glass-border);border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:9px;transition:all .28s cubic-bezier(.34,1.56,.64,1);overflow:hidden; }
+    .action-btn.pdf-btn   { background:rgba(99,102,241,.1); color:var(--accent3); }
+    .action-btn.email-btn { background:rgba(52,211,153,.07);color:#6ee7b7; }
+    .action-btn::before { content:'';position:absolute;inset:0;opacity:0;transition:opacity .28s; }
+    .action-btn.pdf-btn::before   { background:linear-gradient(135deg,rgba(99,102,241,.22),rgba(129,140,248,.12)); }
+    .action-btn.email-btn::before { background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(110,231,183,.09)); }
+    .action-btn:hover:not(:disabled)::before { opacity:1; }
+    .action-btn:hover:not(:disabled) { transform:translateY(-2px);box-shadow:0 8px 22px rgba(99,102,241,.18); }
+    .action-btn:disabled { opacity:.28;cursor:not-allowed; }
+ 
+    /* MAIN */
+    .main { flex:1;padding:36px 44px;overflow-y:auto;position:relative;z-index:1; }
+    .page-header { margin-bottom:32px; }
+    .page-title { font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,var(--text) 40%,var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:5px; }
+    .page-sub { color:var(--muted);font-size:.84rem;font-family:'DM Mono',monospace; }
+ 
+    /* STATUS */
+    .status-bar { padding:11px 16px;border-radius:9px;margin-bottom:22px;font-size:.85rem;font-weight:500;border:1px solid transparent;display:none;animation:slideIn .28s ease; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)} }
+    .status-bar.info    { background:rgba(30,58,95,.45);color:#93c5fd;border-color:rgba(59,130,246,.18); }
+    .status-bar.success { background:rgba(20,83,45,.45);color:#86efac;border-color:rgba(34,197,94,.18); }
+    .status-bar.error   { background:rgba(127,29,29,.45);color:#fca5a5;border-color:rgba(239,68,68,.18); }
+ 
+    /* TAB PANELS */
+    .tab-panel { background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-radius:14px;padding:26px;margin-bottom:26px;display:none;animation:fadeUp .32s ease; }
+    .tab-panel.active { display:block; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+    .tab-panel > h3 { font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--accent3);margin-bottom:14px; }
+    .tab-panel p.hint { font-size:.78rem;color:var(--muted);margin-bottom:14px;line-height:1.55; }
+ 
+    textarea { width:100%;padding:13px;background:rgba(5,8,16,.55);color:var(--text);border:1px solid var(--glass-border);border-radius:9px;font-size:.85rem;font-family:'DM Sans',sans-serif;resize:vertical;transition:border-color .2s; }
+    textarea:focus { outline:none;border-color:rgba(99,102,241,.45); }
+    textarea::placeholder { color:var(--muted); }
+ 
+    .file-row { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px; }
+    .file-label { display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:8px;color:var(--accent3);font-size:.82rem;font-family:'DM Mono',monospace;cursor:pointer;transition:all .22s;white-space:nowrap; }
+    .file-label:hover { background:rgba(99,102,241,.18); }
+    .file-label.full { width:100%;justify-content:center; }
+    .file-label.red-style { background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.25);color:#fca5a5; }
+    .file-label.red-style:hover { background:rgba(248,113,113,.16); }
+    .file-chosen { font-size:.76rem;color:var(--muted);font-family:'DM Mono',monospace; }
+    input[type="file"] { display:none; }
+ 
+    /* GEN BUTTON */
+    .gen-btn { position:relative;padding:12px 26px;background:linear-gradient(135deg,var(--accent),#4f46e5);color:white;border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:700;margin-top:12px;overflow:hidden;transition:all .28s cubic-bezier(.34,1.56,.64,1);letter-spacing:.02em; }
+    .gen-btn::before { content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:rgba(255,255,255,.14);transform:skewX(-25deg);transition:left .45s; }
+    .gen-btn:hover { transform:translateY(-3px) scale(1.02);box-shadow:0 12px 28px rgba(99,102,241,.38); }
+    .gen-btn:hover::before { left:120%; }
+ 
+    /* GENERATED RESULTS — lives inside each generate tab */
+    .gen-results { margin-top:22px;display:none;animation:fadeUp .32s ease; }
+    .results-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px; }
+    .results-title { font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:var(--text); }
+    .badge { background:rgba(99,102,241,.18);color:var(--accent3);font-size:.67rem;padding:3px 10px;border-radius:99px;font-family:'DM Mono',monospace;font-weight:600;border:1px solid rgba(99,102,241,.18); }
+    .table-wrap { overflow-x:auto;border-radius:9px;border:1px solid var(--glass-border); }
+    table { width:100%;border-collapse:collapse;font-size:.8rem; }
+    th { background:rgba(17,24,39,.75);color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.62rem;letter-spacing:.1em;padding:11px 14px;text-align:left;font-family:'DM Mono',monospace;border-bottom:1px solid var(--glass-border); }
+    td { padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top;color:#cbd5e1; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(99,102,241,.05); }
+    .num-cell { font-family:'DM Mono',monospace;color:var(--muted);font-size:.72rem; }
+    .title-cell { font-weight:500;color:var(--text);max-width:190px; }
+    .steps-cell { max-width:230px;font-size:.76rem;color:#94a3b8;line-height:1.55; }
+    .expected-cell { max-width:190px;font-size:.76rem; }
+    .priority-pill { display:inline-block;padding:2px 9px;border-radius:99px;font-size:.62rem;font-weight:700;font-family:'DM Mono',monospace; }
+    .priority-pill.high   { background:rgba(248,113,113,.13);color:var(--red);   border:1px solid rgba(248,113,113,.22); }
+    .priority-pill.medium { background:rgba(251,191,36,.09); color:var(--yellow);border:1px solid rgba(251,191,36,.18); }
+    .priority-pill.low    { background:rgba(52,211,153,.09); color:var(--green); border:1px solid rgba(52,211,153,.18); }
+    .type-tag { display:inline-block;padding:2px 7px;background:rgba(99,102,241,.09);color:var(--accent3);border-radius:4px;font-size:.62rem;font-family:'DM Mono',monospace;border:1px solid rgba(99,102,241,.14); }
+ 
+    /* small action buttons inside results header */
+    .btn-sm { padding:5px 11px;border-radius:6px;font-size:.71rem;cursor:pointer;font-family:'DM Mono',monospace;transition:all .2s;border:1px solid; }
+    .btn-sm.json  { background:rgba(99,102,241,.12);color:var(--accent3);border-color:rgba(99,102,241,.22); }
+    .btn-sm.json:hover  { background:rgba(99,102,241,.22); }
+    .btn-sm.send  { background:rgba(52,211,153,.1);color:#6ee7b7;border-color:rgba(52,211,153,.22); }
+    .btn-sm.send:hover  { background:rgba(52,211,153,.2); }
+    .btn-sm.run-pdf   { background:rgba(14,165,233,.12);color:#7dd3fc;border-color:rgba(14,165,233,.25); }
+    .btn-sm.run-pdf:hover { background:rgba(14,165,233,.22); }
+    .btn-sm.run-email { background:rgba(52,211,153,.1);color:#6ee7b7;border-color:rgba(52,211,153,.22); }
+    .btn-sm.run-email:hover { background:rgba(52,211,153,.2); }
+ 
+    /* RUN TAB */
+    .run-upload-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px; }
+    .upload-card { background:rgba(5,8,16,.4);border:1px solid var(--glass-border);border-radius:12px;padding:18px; }
+    .upload-card h4 { font-size:.78rem;color:var(--accent3);font-family:'DM Mono',monospace;margin-bottom:7px;letter-spacing:.05em;text-transform:uppercase; }
+    .upload-card p  { font-size:.74rem;color:var(--muted);margin-bottom:12px;line-height:1.5; }
+    .or-divider { text-align:center;color:var(--muted);font-size:.7rem;font-family:'DM Mono',monospace;margin:8px 0; }
+    .section-divider { height:1px;background:var(--glass-border);margin:16px 0; }
+    .info-box { display:flex;gap:10px;align-items:flex-start;background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.18);border-radius:9px;padding:13px 15px;margin-bottom:14px; }
+    .info-box p { font-size:.77rem;color:#7dd3fc;line-height:1.55; }
+    .info-box strong { color:#bae6fd; }
+    .tc-paste { height:84px;font-family:'DM Mono',monospace !important;font-size:.73rem !important; }
+    .tc-load-msg { font-size:.72rem;font-family:'DM Mono',monospace;margin-top:6px;display:none; }
+    .tag-note { font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:6px; }
+ 
+    /* Execute button */
+    .run-go-btn { position:relative;padding:12px 26px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:700;overflow:hidden;display:inline-flex;align-items:center;gap:8px;transition:all .28s cubic-bezier(.34,1.56,.64,1); }
+    .run-go-btn:hover { transform:translateY(-3px);box-shadow:0 12px 28px rgba(14,165,233,.36); }
+    .run-go-btn:disabled { opacity:.28;cursor:not-allowed;transform:none;box-shadow:none; }
+    .progress-track { height:4px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;margin-top:14px;display:none; }
+    .progress-fill  { height:100%;width:0;background:linear-gradient(90deg,var(--green),#0ea5e9);border-radius:99px;transition:width .3s; }
+ 
+    /* Analytics — lives ONLY in runtab */
+    .run-analytics { margin-top:28px;display:none;animation:fadeUp .35s ease; }
+    .analysis-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px; }
+    .stat-card { background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:18px;position:relative;overflow:hidden;transition:transform .22s; }
+    .stat-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px; }
+    .stat-card.total::before    { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .stat-card.passed::before   { background:linear-gradient(90deg,var(--green),#10b981); }
+    .stat-card.failed::before   { background:linear-gradient(90deg,var(--red),#ef4444); }
+    .stat-card.coverage::before { background:linear-gradient(90deg,var(--yellow),#f59e0b); }
+    .stat-card:hover { transform:translateY(-3px); }
+    .stat-label { font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:7px; }
+    .stat-value { font-family:'Syne',sans-serif;font-size:1.85rem;font-weight:800;letter-spacing:-.03em; }
+    .stat-card.total .stat-value    { color:var(--accent3); }
+    .stat-card.passed .stat-value   { color:var(--green); }
+    .stat-card.failed .stat-value   { color:var(--red); }
+    .stat-card.coverage .stat-value { color:var(--yellow); }
+    .charts-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px; }
+    .chart-card { background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:18px;transition:transform .22s; }
+    .chart-card:hover { transform:translateY(-2px); }
+    .chart-title { font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:13px; }
+    .donut-wrap { display:flex;align-items:center;gap:14px; }
+    .donut-legend { font-size:.76rem;display:flex;flex-direction:column;gap:5px; }
+    .legend-item { display:flex;align-items:center;gap:6px; }
+    .legend-dot { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+    .bar-chart { display:flex;flex-direction:column;gap:7px; }
+    .bar-row { display:flex;align-items:center;gap:9px; }
+    .bar-label { width:64px;color:var(--muted);text-align:right;font-family:'DM Mono',monospace;font-size:.67rem; }
+    .bar-track { flex:1;height:7px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden; }
+    .bar-fill  { height:100%;border-radius:99px;transition:width 1s cubic-bezier(.34,1.3,.64,1);width:0; }
+    .bar-count { width:22px;text-align:right;color:var(--muted);font-family:'DM Mono',monospace;font-size:.67rem; }
+    .timeline { display:flex;flex-direction:column;gap:5px;max-height:145px;overflow-y:auto; }
+    .timeline::-webkit-scrollbar { width:3px; }
+    .timeline::-webkit-scrollbar-thumb { background:var(--glass-border);border-radius:99px; }
+    .tl-item { display:flex;align-items:center;gap:7px;font-size:.7rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04); }
+    .tl-dot  { width:5px;height:5px;border-radius:50%;flex-shrink:0; }
+    .tl-title { flex:1;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.68rem; }
+    .tl-badge { font-size:.62rem;padding:2px 7px;border-radius:99px;font-family:'DM Mono',monospace;font-weight:600;flex-shrink:0; }
+    .tl-badge.passed { background:rgba(52,211,153,.14);color:var(--green); }
+    .tl-badge.failed { background:rgba(248,113,113,.14);color:var(--red); }
+ 
+    /* Full run report table */
+    .run-report { margin-top:22px; }
+    .status-pill { display:inline-block;padding:2px 9px;border-radius:99px;font-size:.62rem;font-weight:700;font-family:'DM Mono',monospace; }
+    .status-pill.passed  { background:rgba(52,211,153,.11);color:var(--green);border:1px solid rgba(52,211,153,.18); }
+    .status-pill.failed  { background:rgba(248,113,113,.11);color:var(--red); border:1px solid rgba(248,113,113,.18); }
+ 
+    /* MODAL */
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:#0d1117;border:1px solid var(--glass-border);border-radius:18px;padding:34px;width:390px;animation:scaleIn .28s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes scaleIn { from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)} }
+    .modal-box h3 { font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:18px; }
+    .modal-input { width:100%;padding:11px 13px;background:rgba(5,8,16,.55);color:var(--text);border:1px solid var(--glass-border);border-radius:9px;font-size:.85rem;transition:border-color .2s;margin-bottom:14px; }
+    .modal-input:focus { outline:none;border-color:rgba(99,102,241,.45); }
+    .modal-input::placeholder { color:var(--muted); }
+    .modal-actions { display:flex;gap:9px; }
+    .modal-send-btn { flex:1;padding:11px;background:linear-gradient(135deg,var(--green),#10b981);color:#050810;border:none;border-radius:9px;cursor:pointer;font-size:.85rem;font-weight:700;transition:all .22s; }
+    .modal-send-btn:hover { transform:translateY(-2px);box-shadow:0 8px 18px rgba(52,211,153,.28); }
+    .modal-cancel-btn { padding:11px 16px;background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--glass-border);border-radius:9px;cursor:pointer;font-size:.85rem;transition:all .22s; }
+    .modal-cancel-btn:hover { background:rgba(255,255,255,.08);color:var(--text); }
+ 
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--subtle);border-radius:99px; }
+    .file-chips h4 { color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;font-family:'DM Mono',monospace;margin-top:10px; }
+    .file-chips ul { list-style:none;display:flex;flex-wrap:wrap;gap:5px; }
+    .file-chips li { background:rgba(99,102,241,.09);border:1px solid rgba(99,102,241,.18);color:var(--accent3);padding:2px 9px;border-radius:5px;font-size:.72rem;font-family:'DM Mono',monospace; }
+  </style>
+</head>
+<body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+ 
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">TECHGEN</div>
+  <div class="logo-sub">Intelligent Testing</div>
+ 
+  <div class="nav-label">Generate Tests</div>
+  <button class="nav-btn active" onclick="openTab('desc',this)"><span>📝</span> Description</button>
+  <button class="nav-btn" onclick="openTab('srs',this)"><span>📄</span> Upload SRS / PDF</button>
+  <button class="nav-btn" onclick="openTab('code',this)"><span>💻</span> Upload Code</button>
+ 
+  <div class="sidebar-divider"></div>
+  <div class="nav-label">Execute</div>
+  <button class="nav-btn" id="navRunBtn" onclick="openTab('runtab',this)"><span>▶</span> Run Tests</button>
+ 
+  <div class="sidebar-divider"></div>
+  <div class="nav-label">Export</div>
+  <button class="action-btn pdf-btn" id="pdfBtn" disabled onclick="downloadPDF()"><span>⬇</span> Export PDF</button>
+  <button class="action-btn email-btn" id="emailBtn" disabled onclick="openEmailModal()"><span>✉</span> Send via Email</button>
+ 
+  <div style="flex:1"></div>
+  <div style="font-size:.6rem;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;padding:10px 0;border-top:1px solid var(--glass-border);">Powered by LLaMA 3.3 · Groq</div>
+</nav>
+ 
+<!-- MAIN -->
+<div class="main">
+  <div class="page-header">
+    <h1 class="page-title" id="pageTitle">Testing Dashboard</h1>
+    <p class="page-sub" id="pageSub">Generate, run, and export AI-powered test cases</p>
+  </div>
+  <div id="statusBar" class="status-bar"></div>
+ 
+  <!-- ══════════════════════ DESC TAB ══════════════════════════ -->
+  <div id="desc" class="tab-panel active">
+    <h3>⚡ Describe Your System</h3>
+    <p class="hint">Describe a feature, flow, or system in plain English. Be specific — the more detail you give, the better the test cases.</p>
+    <textarea id="inputText" style="height:130px;" placeholder="e.g. 'A login flow with email/password, Google OAuth, forgot password, and 2FA enforcement.'"></textarea>
+    <button class="gen-btn" onclick="generateTests()">🔍 Generate Test Cases</button>
+ 
+    <!-- Results live INSIDE this tab — no bleed-through -->
+    <div class="gen-results" id="descResults">
+      <div class="results-header" style="margin-top:20px;">
+        <span class="results-title">Generated Test Cases</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge" id="descCount"></span>
+          <button class="btn-sm json" onclick="downloadJSON('desc')">⬇ JSON</button>
+          <button class="btn-sm send" onclick="sendToRunTab('desc')">▶ Send to Run Tab</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="descTable">
+          <thead><tr><th>#</th><th>Title</th><th>Steps</th><th>Expected Result</th><th>Priority</th><th>Type</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ══════════════════════ SRS TAB ══════════════════════════ -->
+  <div id="srs" class="tab-panel">
+    <h3>📄 Upload Requirements Document</h3>
+    <p class="hint">Upload a PDF containing your SRS, BRD, or requirements document. The AI will extract requirements and produce traceable test cases.</p>
+    <div class="file-row">
+      <label class="file-label" for="srsFile">📎 Choose PDF</label>
+      <input type="file" id="srsFile" accept=".pdf" onchange="updateLabel('srsFile','srsFileLabel')" />
+      <span class="file-chosen" id="srsFileLabel">No file selected</span>
+    </div>
+    <button class="gen-btn" onclick="uploadPDF()">📤 Parse &amp; Generate</button>
+ 
+    <!-- Results live INSIDE this tab — no run/analytics shown here -->
+    <div class="gen-results" id="srsResults">
+      <div class="results-header" style="margin-top:20px;">
+        <span class="results-title">Generated Test Cases</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge" id="srsCount"></span>
+          <button class="btn-sm json" onclick="downloadJSON('srs')">⬇ JSON</button>
+          <button class="btn-sm send" onclick="sendToRunTab('srs')">▶ Send to Run Tab</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="srsTable">
+          <thead><tr><th>#</th><th>Title</th><th>Steps</th><th>Expected Result</th><th>Priority</th><th>Type</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ══════════════════════ CODE TAB ══════════════════════════ -->
+  <div id="code" class="tab-panel">
+    <h3>💻 Upload Source Code</h3>
+    <p class="hint">Upload one or more source files. The AI reads your actual code and generates specific test cases for every function, route, and component.</p>
+    <div class="file-row">
+      <label class="file-label" for="codeFile">📎 Choose Files</label>
+      <input type="file" id="codeFile" multiple accept=".py,.js,.java,.html,.css,.ts,.jsx,.tsx" onchange="updateCodeLabel()" />
+      <span class="file-chosen" id="codeFileLabel">No files selected</span>
+    </div>
+    <button class="gen-btn" onclick="uploadCode()">📤 Analyze &amp; Generate</button>
+    <div id="uploadedFiles" class="file-chips" style="margin-top:10px;"></div>
+ 
+    <!-- Results live INSIDE this tab -->
+    <div class="gen-results" id="codeResults">
+      <div class="results-header" style="margin-top:20px;">
+        <span class="results-title">Generated Test Cases</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge" id="codeCount"></span>
+          <button class="btn-sm json" onclick="downloadJSON('code')">⬇ JSON</button>
+          <button class="btn-sm send" onclick="sendToRunTab('code')">▶ Send to Run Tab</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="codeTable">
+          <thead><tr><th>#</th><th>Title</th><th>Steps</th><th>Expected Result</th><th>Priority</th><th>Type</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ══════════════════════ RUN TESTS TAB ══════════════════════ -->
+  <div id="runtab" class="tab-panel">
+    <h3>⚡ Run Tests Against Your Code</h3>
+ 
+    <div class="info-box">
+      <span style="font-size:1rem;flex-shrink:0;margin-top:1px;">💡</span>
+      <p>
+        Upload your <strong>test cases</strong> (JSON file, PDF test report, or use the "Send to Run Tab" button from any generate tab)
+        <strong>and</strong> your <strong>project source files</strong>.
+        Analytics charts and the full execution report will appear here after running.
+      </p>
+    </div>
+ 
+    <div class="run-upload-grid">
+ 
+      <!-- ① TEST CASES -->
+      <div class="upload-card">
+        <h4>① Test Cases</h4>
+        <p>Upload a <strong>JSON</strong> export from any generate tab, or upload a <strong>PDF</strong> (the AI will extract test cases from it), or paste JSON directly below.</p>
+ 
+        <div class="file-row" style="margin-bottom:4px;">
+          <label class="file-label full" for="tcJsonFile">📋 Upload JSON File</label>
+          <input type="file" id="tcJsonFile" accept=".json,.txt" onchange="loadTCJson()" />
+        </div>
+ 
+        <div class="file-row" style="margin-bottom:4px;">
+          <label class="file-label full red-style" for="tcPdfFile">📄 Upload PDF Test Cases</label>
+          <input type="file" id="tcPdfFile" accept=".pdf" onchange="loadTCPdf()" />
+        </div>
+ 
+        <div class="or-divider">— or paste JSON below —</div>
+        <textarea class="tc-paste" id="tcJsonPaste" placeholder='[{"title":"...","steps":"...","expected":"...","priority":"High","type":"Functional"}]'></textarea>
+        <div class="tc-load-msg" id="tcLoadMsg"></div>
+      </div>
+ 
+      <!-- ② CODE FILES -->
+      <div class="upload-card">
+        <h4>② Project Source Files</h4>
+        <p>Upload the source code files to run the test cases against.</p>
+        <div class="file-row">
+          <label class="file-label full" for="runCodeFile">📎 Upload Code Files</label>
+          <input type="file" id="runCodeFile" multiple accept=".py,.js,.java,.html,.css,.ts,.jsx,.tsx,.txt" onchange="updateRunCodeLabel()" />
+        </div>
+        <div id="runUploadedFiles" class="file-chips"></div>
+        <p class="tag-note">Accepts: .py .js .java .html .css .ts .jsx .tsx .txt</p>
+      </div>
+    </div>
+ 
+    <div class="section-divider"></div>
+ 
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="run-go-btn" id="runGoBtn" onclick="executeRunTests()">⚡ Execute Test Suite</button>
+      <span id="runGoStatus" style="font-size:.78rem;color:var(--muted);font-family:'DM Mono',monospace;"></span>
+    </div>
+    <div class="progress-track" id="runProgress"><div class="progress-fill" id="runProgressFill"></div></div>
+ 
+    <!-- ── ALL analytics + report live here — hidden until after Execute ── -->
+    <div class="run-analytics" id="runAnalytics">
+ 
+      <div class="analysis-grid">
+        <div class="stat-card total">   <div class="stat-label">Total</div>    <div class="stat-value" id="runStatTotal">0</div></div>
+        <div class="stat-card passed">  <div class="stat-label">Passed</div>   <div class="stat-value" id="runStatPassed">—</div></div>
+        <div class="stat-card failed">  <div class="stat-label">Failed</div>   <div class="stat-value" id="runStatFailed">—</div></div>
+        <div class="stat-card coverage"><div class="stat-label">Pass Rate</div><div class="stat-value" id="runStatRate">—</div></div>
+      </div>
+ 
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Priority Distribution</div>
+          <div class="donut-wrap">
+            <svg width="86" height="86" viewBox="0 0 90 90" id="runDonutSvg">
+              <circle cx="45" cy="45" r="35" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="12"/>
+            </svg>
+            <div class="donut-legend" id="runDonutLegend"></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Test Type Breakdown</div>
+          <div class="bar-chart" id="runTypeBar"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Execution Timeline</div>
+          <div class="timeline" id="runTimeline">
+            <div style="color:var(--muted);font-size:.76rem;text-align:center;padding:18px 0;">No results yet</div>
+          </div>
+        </div>
+      </div>
+ 
+      <!-- Full execution report table -->
+      <div class="run-report">
+        <div class="results-header">
+          <span class="results-title">Full Execution Report</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="badge" id="runTestCount"></span>
+            <button class="btn-sm run-pdf" onclick="downloadResultsPDF()">⬇ Download Report</button>
+            <button class="btn-sm run-email" onclick="openRunEmailModal()">✉ Email Report</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="runTable">
+            <thead><tr><th>#</th><th>Title</th><th>Steps</th><th>Expected</th><th>Priority</th><th>Type</th><th>Status</th><th>Message</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+ 
+    </div><!-- /runAnalytics -->
+  </div><!-- /runtab -->
+ 
+</div><!-- /main -->
+ 
+<!-- EMAIL MODAL (generated test cases) -->
+<div id="emailModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>✉ Send Test Report</h3>
+    <input type="email" class="modal-input" id="emailInput" placeholder="recipient@example.com" />
+    <div class="modal-actions">
+      <button class="modal-send-btn" onclick="sendEmail()">Send Report</button>
+      <button class="modal-cancel-btn" onclick="closeEmailModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- EMAIL MODAL (execution results report) -->
+<div id="runEmailModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>✉ Email Execution Report</h3>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+      The full execution report with AI analysis, pass/fail verdicts, and summary statistics will be sent as a PDF attachment.
+    </p>
+    <input type="email" class="modal-input" id="runEmailInput" placeholder="recipient@example.com" />
+    <div class="modal-actions">
+      <button class="modal-send-btn" onclick="sendResultsEmail()">Send Report</button>
+      <button class="modal-cancel-btn" onclick="closeRunEmailModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+ 
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const tabTests = { desc:[], srs:[], code:[] };  // each tab's generated tests
+let latestTests = [];   // last generated — used for PDF/email export
+ 
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+const TAB_META = {
+  desc:   ['Testing Dashboard',     'Generate test cases from a plain-text description'],
+  srs:    ['SRS / PDF Parser',      'Extract requirements and produce traceable test cases'],
+  code:   ['Code Analyzer',         'Generate test cases directly from your source code'],
+  runtab: ['Test Execution Engine', 'Upload test cases + code and run the full suite'],
+};
+ 
+function openTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  const [title, sub] = TAB_META[id] || TAB_META.desc;
+  document.getElementById('pageTitle').textContent = title;
+  document.getElementById('pageSub').textContent   = sub;
+  hideStatus();
+}
+ 
+// ── STATUS ────────────────────────────────────────────────────────────────────
+function showStatus(msg, type='info') {
+  const b = document.getElementById('statusBar');
+  b.textContent = msg; b.className = 'status-bar '+type; b.style.display = 'block';
+}
+function hideStatus() { document.getElementById('statusBar').style.display = 'none'; }
+ 
+// ── FILE LABEL HELPERS ────────────────────────────────────────────────────────
+function updateLabel(inputId, labelId) {
+  const f = document.getElementById(inputId).files[0];
+  document.getElementById(labelId).textContent = f ? f.name : 'No file selected';
+}
+function updateCodeLabel() {
+  const fl = document.getElementById('codeFile').files;
+  document.getElementById('codeFileLabel').textContent = fl.length ? `${fl.length} file(s) selected` : 'No files selected';
+}
+function updateRunCodeLabel() {
+  const fl = document.getElementById('runCodeFile').files;
+  const div = document.getElementById('runUploadedFiles');
+  if (!fl.length) { div.innerHTML=''; return; }
+  div.innerHTML = '<h4>Files ready</h4><ul>' + Array.from(fl).map(f=>`<li>${f.name}</li>`).join('') + '</ul>';
+}
+ 
+// ── DISPLAY HELPER — populates a generate tab's own result table ──────────────
+function displayInTab(tabId, tests) {
+  tabTests[tabId] = tests;
+  latestTests = tests;
+  document.getElementById('pdfBtn').disabled   = false;
+  document.getElementById('emailBtn').disabled = false;
+ 
+  const tbody = document.querySelector(`#${tabId}Table tbody`);
+  tbody.innerHTML = '';
+  tests.forEach((t, i) => {
+    const cls = t.priority==='High'?'high':t.priority==='Medium'?'medium':'low';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="num-cell">${String(i+1).padStart(2,'0')}</td>
+      <td class="title-cell">${t.title||'N/A'}</td>
+      <td class="steps-cell">${(t.steps||'').replace(/\n/g,'<br>')}</td>
+      <td class="expected-cell">${t.expected||'N/A'}</td>
+      <td><span class="priority-pill ${cls}">${t.priority||'Low'}</span></td>
+      <td><span class="type-tag">${t.type||'Functional'}</span></td>`;
+    tbody.appendChild(row);
+  });
+  document.getElementById(`${tabId}Count`).textContent   = tests.length + ' tests';
+  document.getElementById(`${tabId}Results`).style.display = 'block';
+}
+ 
+// ── DOWNLOAD JSON ─────────────────────────────────────────────────────────────
+function downloadJSON(tabId) {
+  const tests = tabTests[tabId];
+  if (!tests||!tests.length) { alert('No test cases to export.'); return; }
+  const blob = new Blob([JSON.stringify(tests,null,2)],{type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'),{href:url,download:`testcases_${tabId}.json`});
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  showStatus(`✅ Exported ${tests.length} test cases as JSON.`,'success');
+}
+ 
+// ── SEND TO RUN TAB ───────────────────────────────────────────────────────────
+function sendToRunTab(tabId) {
+  const tests = tabTests[tabId];
+  if (!tests||!tests.length) { alert('No test cases yet — generate some first.'); return; }
+  document.getElementById('tcJsonPaste').value = JSON.stringify(tests, null, 2);
+  openTab('runtab', document.getElementById('navRunBtn'));
+  // Show load message after tab switch (element now visible)
+  showTcMsg(`✅ ${tests.length} test cases loaded from ${tabId.toUpperCase()} tab.`, 'var(--green)');
+  showStatus(`✅ ${tests.length} test cases ready. Upload your code files and click Execute.`, 'success');
+}
+ 
+// ── GENERATE FROM DESCRIPTION ─────────────────────────────────────────────────
+function generateTests() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) { alert('Please enter a system description first.'); return; }
+  showStatus('⏳ AI is generating test cases…', 'info');
+  fetch('http://127.0.0.1:5000/generate-tests', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({description:text})
+  })
+  .then(r=>r.json())
+  .then(data => {
+    if (data.error) { showStatus('❌ '+data.error,'error'); return; }
+    displayInTab('desc', data.test_cases);
+    showStatus(`✅ ${data.test_cases.length} test cases generated.`,'success');
+  })
+  .catch(()=>showStatus('❌ Backend not responding. Start Flask with: python app.py','error'));
+}
+ 
+// ── UPLOAD SRS PDF ────────────────────────────────────────────────────────────
+function uploadPDF() {
+  const file = document.getElementById('srsFile').files[0];
+  if (!file) { alert('Please select a PDF file first.'); return; }
+  const fd = new FormData(); fd.append('file', file);
+  showStatus('⏳ Parsing PDF… AI is generating test cases.', 'info');
+  fetch('http://127.0.0.1:5000/upload-pdf', {method:'POST', body:fd})
+  .then(r=>r.json())
+  .then(data => {
+    if (data.error) { showStatus('❌ '+data.error,'error'); return; }
+    displayInTab('srs', data.test_cases);
+    showStatus(`✅ ${data.test_cases.length} test cases generated from PDF.`,'success');
+  })
+  .catch(()=>showStatus('❌ Upload failed. Make sure Flask is running.','error'));
+}
+ 
+// ── UPLOAD CODE ───────────────────────────────────────────────────────────────
+function uploadCode() {
+  const files = document.getElementById('codeFile').files;
+  if (!files||!files.length) { alert('Please select at least one code file.'); return; }
+  const fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  document.getElementById('uploadedFiles').innerHTML =
+    '<h4>Uploaded</h4><ul>' + Array.from(files).map(f=>`<li>${f.name}</li>`).join('') + '</ul>';
+  showStatus('⏳ AI is reading your code and generating test cases…', 'info');
+  fetch('http://127.0.0.1:5000/upload-code', {method:'POST', body:fd})
+  .then(r=>r.json())
+  .then(data => {
+    if (data.error) { showStatus('❌ '+data.error,'error'); return; }
+    displayInTab('code', data.test_cases);
+    showStatus(`✅ ${data.test_cases.length} test cases generated from ${data.files.length} file(s).`,'success');
+  })
+  .catch(()=>showStatus('❌ Upload failed. Make sure Flask is running.','error'));
+}
+ 
+// ── LOAD TC FROM JSON FILE ────────────────────────────────────────────────────
+function loadTCJson() {
+  const file = document.getElementById('tcJsonFile').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('tcJsonPaste').value = e.target.result;
+    showTcMsg(`✅ Loaded ${file.name}`, 'var(--green)');
+  };
+  reader.readAsText(file);
+}
+ 
+// ── LOAD TC FROM PDF FILE ─────────────────────────────────────────────────────
+// Sends the PDF to /upload-pdf — backend parses it and returns test cases as JSON
+function loadTCPdf() {
+  const file = document.getElementById('tcPdfFile').files[0];
+  if (!file) return;
+  showTcMsg('⏳ Parsing PDF test cases via backend…', 'var(--yellow)');
+  const fd = new FormData(); fd.append('file', file);
+  fetch('http://127.0.0.1:5000/upload-pdf', {method:'POST', body:fd})
+  .then(r=>r.json())
+  .then(data => {
+    if (data.error) { showTcMsg('❌ '+data.error, 'var(--red)'); return; }
+    document.getElementById('tcJsonPaste').value = JSON.stringify(data.test_cases, null, 2);
+    showTcMsg(`✅ Loaded ${data.test_cases.length} test cases from PDF.`, 'var(--green)');
+  })
+  .catch(()=>showTcMsg('❌ Failed. Make sure Flask is running.', 'var(--red)'));
+}
+ 
+function showTcMsg(msg, color) {
+  const el = document.getElementById('tcLoadMsg');
+  el.textContent = msg; el.style.color = color; el.style.display = 'block';
+}
+ 
+// ── EXECUTE RUN TESTS ─────────────────────────────────────────────────────────
+async function executeRunTests() {
+  // 1. Parse test cases
+  let testCases;
+  const raw = document.getElementById('tcJsonPaste').value.trim();
+  if (!raw) { showStatus('❌ Please upload or paste test cases first (JSON or PDF).','error'); return; }
+  try {
+    testCases = JSON.parse(raw);
+    if (!Array.isArray(testCases)||!testCases.length) throw new Error('empty');
+  } catch(e) {
+    showStatus('❌ Invalid or empty JSON in test cases field.','error'); return;
+  }
+ 
+  // 2. Code files — required for real analysis
+  const codeFiles = document.getElementById('runCodeFile').files;
+  if (!codeFiles||!codeFiles.length) {
+    showStatus('❌ Please upload at least one project source file so the AI can analyse it.','error'); return;
+  }
+ 
+  const btn = document.getElementById('runGoBtn');
+  btn.disabled = true;
+  const pt = document.getElementById('runProgress');
+  const pf = document.getElementById('runProgressFill');
+  pt.style.display = 'block';
+ 
+  const totalBatches = Math.ceil(testCases.length / 8);
+  document.getElementById('runGoStatus').textContent =
+    `🤖 AI is reading your code and analysing ${testCases.length} test cases (${totalBatches} batch${totalBatches>1?'es':''})…`;
+  showStatus(`⏳ AI is analysing your code against ${testCases.length} test cases — this may take 15–30 seconds…`,'info');
+ 
+  let prog = 0;
+  const pi = setInterval(()=>{ prog=Math.min(prog+Math.random()*4,90); pf.style.width=prog+'%'; }, 400);
+ 
+  try {
+    // 3. Send as multipart/form-data — test_cases as JSON string + code as real files
+    const fd = new FormData();
+    fd.append('test_cases', JSON.stringify(testCases));
+    for (let i=0; i<codeFiles.length; i++) {
+      fd.append('files', codeFiles[i]);
+    }
+ 
+    const res  = await fetch('http://127.0.0.1:5000/run-tests', {
+      method: 'POST',
+      body: fd   // no Content-Type header — browser sets multipart boundary automatically
+    });
+    const data = await res.json();
+ 
+    clearInterval(pi); pf.style.width='100%';
+    setTimeout(()=>{ pt.style.display='none'; pf.style.width='0'; },600);
+ 
+    if (data.error) { showStatus('❌ '+data.error,'error'); btn.disabled=false; document.getElementById('runGoStatus').textContent=''; return; }
+ 
+    renderRunResults(data.results, data.summary, testCases);
+    document.getElementById('runGoStatus').textContent = '';
+    showStatus(
+      `✅ AI analysis complete — ${data.summary.passed} passed, ${data.summary.failed} failed (${data.summary.pass_rate}% pass rate). Results are based on real code analysis.`,
+      'success'
+    );
+  } catch(e) {
+    clearInterval(pi); pt.style.display='none';
+    showStatus('❌ Backend not responding. Start Flask with: python app.py','error');
+    document.getElementById('runGoStatus').textContent = '';
+  }
+  btn.disabled = false;
+}
+ 
+// ── RENDER ALL ANALYTICS + REPORT TABLE (run tab only) ───────────────────────
+function renderRunResults(results, summary, testCases) {
+  // Save for download/email
+  lastRunResults   = results;
+  lastRunSummary   = summary;
+  lastRunTestCases = testCases;
+  // Stat cards
+  document.getElementById('runStatTotal').textContent = summary.total;
+  animNum('runStatPassed', summary.passed);
+  animNum('runStatFailed', summary.failed);
+  document.getElementById('runStatRate').textContent  = summary.pass_rate + '%';
+  document.getElementById('runTestCount').textContent = summary.total + ' tests';
+ 
+  // Priority donut
+  const pc={};
+  testCases.forEach(t=>{ const p=t.priority||'Low'; pc[p]=(pc[p]||0)+1; });
+  renderDonut('runDonutSvg','runDonutLegend',[
+    {label:'High',  value:pc.High||0,   color:'#f87171'},
+    {label:'Medium',value:pc.Medium||0, color:'#fbbf24'},
+    {label:'Low',   value:pc.Low||0,    color:'#34d399'},
+  ].filter(d=>d.value>0), summary.total);
+ 
+  // Type bar
+  const tc={};
+  testCases.forEach(t=>{ const typ=t.type||'Functional'; tc[typ]=(tc[typ]||0)+1; });
+  renderTypeBar('runTypeBar',tc,summary.total);
+ 
+  // Timeline
+  document.getElementById('runTimeline').innerHTML = results.map(r=>`
+    <div class="tl-item">
+      <div class="tl-dot" style="background:${r.status==='Passed'?'var(--green)':'var(--red)'}"></div>
+      <span class="tl-title">${r.title}</span>
+      <span class="tl-badge ${r.status.toLowerCase()}">${r.status}</span>
+    </div>`).join('');
+ 
+  // Full report table
+  const tbody = document.querySelector('#runTable tbody');
+  tbody.innerHTML = '';
+  results.forEach((r,i) => {
+    const orig = testCases[i]||{};
+    const pcls = (r.priority==='High')?'high':(r.priority==='Medium')?'medium':'low';
+    const scls = r.status==='Passed'?'passed':'failed';
+    const row  = document.createElement('tr');
+    row.innerHTML = `
+      <td class="num-cell">${String(i+1).padStart(2,'0')}</td>
+      <td class="title-cell">${r.title||'N/A'}</td>
+      <td class="steps-cell">${(orig.steps||'').replace(/\n/g,'<br>')}</td>
+      <td class="expected-cell">${orig.expected||'N/A'}</td>
+      <td><span class="priority-pill ${pcls}">${r.priority||'Low'}</span></td>
+      <td><span class="type-tag">${r.type||'Functional'}</span></td>
+      <td><span class="status-pill ${scls}">${r.status}</span></td>
+      <td style="font-size:.73rem;color:#94a3b8;">${r.message||''}</td>`;
+    tbody.appendChild(row);
+  });
+ 
+  document.getElementById('runAnalytics').style.display = 'block';
+  document.getElementById('runAnalytics').scrollIntoView({behavior:'smooth',block:'start'});
+}
+ 
+// ── CHART HELPERS ─────────────────────────────────────────────────────────────
+function animNum(id, target) {
+  const el=document.getElementById(id); let s=0;
+  const step=()=>{ s=Math.min(s+Math.ceil(target/10),target); el.textContent=s; if(s<target) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function renderDonut(svgId, legendId, data, total) {
+  const svg=document.getElementById(svgId);
+  const r=35,cx=45,cy=45,circ=2*Math.PI*r;
+  svg.querySelectorAll('.seg').forEach(s=>s.remove());
+  let offset=0;
+  data.forEach(d=>{
+    const pct=d.value/total,len=pct*circ;
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',r);
+    c.setAttribute('fill','none');c.setAttribute('stroke',d.color);c.setAttribute('stroke-width','12');
+    c.setAttribute('stroke-dasharray',`${len} ${circ-len}`);
+    c.setAttribute('stroke-dashoffset',-(offset*circ)+circ*0.25);
+    c.style.transition='stroke-dashoffset .5s ease';c.classList.add('seg');
+    svg.insertBefore(c,svg.firstChild);offset+=pct;
+  });
+  document.getElementById(legendId).innerHTML=data.map(d=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${d.color}"></div>
+      <span style="color:#94a3b8">${d.label}</span>
+      <span style="color:${d.color};font-family:'DM Mono',monospace;font-size:.72rem;margin-left:auto">${d.value}</span>
+    </div>`).join('');
+}
+function renderTypeBar(cid, typeCounts, total) {
+  const cols={Functional:'#818cf8',Security:'#f87171',API:'#fbbf24',Unit:'#34d399',UI:'#a78bfa',Performance:'#fb923c',Integration:'#38bdf8',Reliability:'#f472b6'};
+  const sorted=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById(cid).innerHTML=sorted.map(([type,count])=>{
+    const pct=Math.round((count/total)*100),col=cols[type]||'#818cf8';
+    return `<div class="bar-row"><span class="bar-label">${type}</span><div class="bar-track"><div class="bar-fill" style="width:0;background:${col}" data-target="${pct}"></div></div><span class="bar-count">${count}</span></div>`;
+  }).join('');
+  setTimeout(()=>{ document.querySelectorAll(`#${cid} .bar-fill`).forEach(b=>{ b.style.width=b.dataset.target+'%'; }); },80);
+}
+ 
+// ── RUN RESULTS STATE (stored after execution for download/email) ─────────────
+let lastRunResults  = [];
+let lastRunSummary  = {};
+let lastRunTestCases = [];
+ 
+// ── DOWNLOAD EXECUTION RESULTS PDF ───────────────────────────────────────────
+function downloadResultsPDF() {
+  if (!lastRunResults.length) { alert('No execution results yet. Run the test suite first.'); return; }
+  showStatus('⏳ Generating execution report PDF…', 'info');
+ 
+  fetch('http://127.0.0.1:5000/download-results-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      results:    lastRunResults,
+      summary:    lastRunSummary,
+      test_cases: lastRunTestCases,
+    })
+  })
+  .then(res => {
+    if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'PDF failed'); });
+    return res.blob();
+  })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a   = Object.assign(document.createElement('a'), { href: url, download: 'execution_report.pdf' });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    showStatus('✅ Execution report downloaded.', 'success');
+  })
+  .catch(err => showStatus('❌ ' + err.message, 'error'));
+}
+ 
+// ── EMAIL EXECUTION RESULTS ───────────────────────────────────────────────────
+function openRunEmailModal()  { document.getElementById('runEmailModal').classList.add('open'); }
+function closeRunEmailModal() { document.getElementById('runEmailModal').classList.remove('open'); }
+ 
+function sendResultsEmail() {
+  const email = document.getElementById('runEmailInput').value.trim();
+  if (!email || !email.includes('@')) { alert('Enter a valid email address.'); return; }
+  if (!lastRunResults.length) { alert('No execution results yet. Run the test suite first.'); return; }
+ 
+  showStatus('⏳ Sending execution report…', 'info');
+  closeRunEmailModal();
+ 
+  fetch('http://127.0.0.1:5000/send-results-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email:      email,
+      results:    lastRunResults,
+      summary:    lastRunSummary,
+      test_cases: lastRunTestCases,
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { showStatus('❌ ' + data.error, 'error'); return; }
+    showStatus('✅ ' + data.message, 'success');
+  })
+  .catch(() => showStatus('❌ Failed to send email. Make sure Flask is running.', 'error'));
+}
+ 
+// ── PDF EXPORT / EMAIL (generated test cases) ─────────────────────────────────
+function downloadPDF() {
+  if (!latestTests.length) { alert('No test cases to export.'); return; }
+  showStatus('⏳ Generating PDF…','info');
+  fetch('http://127.0.0.1:5000/download-pdf',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({test_cases:latestTests})
+  })
+  .then(res=>{ if(!res.ok) return res.json().then(d=>{throw new Error(d.error||'failed');}); return res.blob(); })
+  .then(blob=>{
+    const url=URL.createObjectURL(blob);
+    const a=Object.assign(document.createElement('a'),{href:url,download:'testcases.pdf'});
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    showStatus('✅ PDF downloaded.','success');
+  })
+  .catch(err=>showStatus('❌ '+err.message,'error'));
+}
+function openEmailModal()  { document.getElementById('emailModal').classList.add('open'); }
+function closeEmailModal() { document.getElementById('emailModal').classList.remove('open'); }
+function sendEmail() {
+  const email=document.getElementById('emailInput').value.trim();
+  if (!email||!email.includes('@')) { alert('Enter a valid email address.'); return; }
+  if (!latestTests.length) { alert('Generate test cases first.'); return; }
+  showStatus('⏳ Sending email…','info'); closeEmailModal();
+  fetch('http://127.0.0.1:5000/send-email',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,test_cases:latestTests})
+  })
+  .then(r=>r.json())
+  .then(data=>{ if(data.error){showStatus('❌ '+data.error,'error');return;} showStatus('✅ '+data.message,'success'); })
+  .catch(()=>showStatus('❌ Failed to send email.','error'));
+}
+</script>
+</body>
+</html>
+ 
